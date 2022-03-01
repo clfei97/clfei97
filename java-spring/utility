@@ -1,0 +1,159 @@
+// create utility class function can be easily call by implementing this interface class
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Optional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
+import javax.xml.bind.DatatypeConverter;
+
+import org.apache.commons.lang3.StringUtils;
+
+public interface Utility {
+    
+    default public String decodeBase64(String data) throws Exception {
+        byte[] decoded = DatatypeConverter.parseBase64Binary(data);
+        return new String(decoded, StandardCharsets.UTF_8);
+    }
+    
+    default public String getCapitalData(String value) {
+        return StringUtils.isEmpty(value) ? value : value.toUpperCase();
+    }
+    
+    default boolean containsIgnoreCase(String str, String[] list){
+        for(String i : list){
+            if(i.equalsIgnoreCase(str))
+                return true;
+        }
+        return false;
+    }
+    
+    default String getMaskData(String value) {
+        String maskString = org.apache.commons.lang3.StringUtils.repeat("*", 5);
+        if (!StringUtils.isEmpty(value))
+            return org.apache.commons.lang3.StringUtils.overlay(value, maskString, 0, 5);
+        else
+            return value;
+    }
+    
+    default public String encrypt(String strToEncrypt, String secret, String ivKey)  {
+        try {
+        	SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(), "AES");
+        	IvParameterSpec iv = new IvParameterSpec(ivKey.getBytes("UTF-8"));
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, iv);
+            return Base64.getEncoder().encodeToString(cipher.doFinal(strToEncrypt.getBytes("UTF-8")));
+        } catch (Exception e) {
+        	LOG.error("Encrpytion : EncryptionError : " + e);
+        }
+        return null;
+    }
+    
+    default String decrypt(String strToDecrypt, String secret, String ivKey) {
+        try {
+        	SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(), "AES");
+        	IvParameterSpec iv = new IvParameterSpec(ivKey.getBytes("UTF-8"));
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, iv);
+            return new String(cipher.doFinal(Base64.getDecoder().decode(strToDecrypt)));
+        } catch (Exception e) {
+        	LOG.error("Encrpytion : DecryptionError : " + e);
+        }
+        return null;
+    }
+    
+    default Date getDateFromString(String pattern, String dateStr){
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        try {
+          return Optional.ofNullable(sdf.parse(dateStr)).get();
+        } catch (Exception e) {
+          return null;
+        }
+    }
+
+    default Date getDateFromDate(String pattern, Date date) {
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        String currentTime = sdf.format(date);
+        try {
+          return Optional.ofNullable(sdf.parse(currentTime)).get();
+        } catch (ParseException e) {
+          return null;
+        }
+    }
+
+    default String getStringFromDate(String pattern, Date date) {
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        return Optional.ofNullable(sdf.format(date)).get();
+    }
+    
+    default String compareDate (Date date1, Date date2){
+    	int integer = date1.compareTo(date2);
+    	if (integer == 0) return "equal";
+    	if (integer > 0) return "after";
+    	if (integer < 0) return "before";
+    	return "impossible reach here";
+    }
+    
+    default LocalDateTime getLocalDateTimeFromString(String pattern, String dateStr){
+    	DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+        try {
+          return Optional.ofNullable(LocalDateTime.parse(dateStr, formatter)).get();
+        } catch (Exception e) {
+          return null;
+        }
+    }
+    
+    default LocalDate getLocalDateFromString(String pattern, String dateStr){
+    	DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+        try {
+          return Optional.ofNullable(LocalDate.parse(dateStr, formatter)).get();
+        } catch (Exception e) {
+          return null;
+        }
+    }
+
+    default String getStringFromLocalDateTime(String pattern, LocalDateTime date) {
+    	DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault());;
+        return Optional.ofNullable(date.format(formatter)).get();
+    }
+    
+    default String getStringFromLocalDate(String pattern, LocalDate date) {
+    	DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault());;
+        return Optional.ofNullable(date.format(formatter)).get();
+    }
+    
+    default LocalDateTime getNow() {
+    	//get GMT+8 in case of server time is difference
+    	LocalDateTime ldt = LocalDateTime.now();
+    	ZoneId zoneId = ZoneId.of("UTC"); 
+    	ZonedDateTime zdtAtUTC = ldt.atZone(zoneId); 
+    	ZonedDateTime zdtAtSG = zdtAtUTC
+    	        .withZoneSameInstant(ZoneId.of("Singapore"));
+    	
+    	return zdtAtSG.toLocalDateTime();
+    }
+
+    
+    default public String generateRandomCode(int length) {
+    	char[] chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".toCharArray();
+        StringBuilder sb = new StringBuilder();
+        Random random = new SecureRandom();
+        for (int i = 0; i < length; i++) {
+            char c = chars[random.nextInt(chars.length)];
+            sb.append(c);
+        }
+        String output = sb.toString();
+        return output ;
+	}
+}
